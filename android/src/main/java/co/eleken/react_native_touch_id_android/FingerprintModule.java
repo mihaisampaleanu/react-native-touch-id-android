@@ -24,38 +24,38 @@ import com.github.ajalt.reprint.core.Reprint;
  */
 
 public class FingerprintModule extends ReactContextBaseJavaModule {
-    
-    
+
+
     private WritableMap response;
-    
+
     private final ReactApplicationContext mReactContext;
-    
+
     FingerprintModule(ReactApplicationContext reactContext) {
         super(reactContext);
         mReactContext = reactContext;
     }
-    
+
     @Override
     public String getName() {
         return "Fingerprint";
     }
-    
+
     @ReactMethod
     public void requestTouch(final Promise promise) {
-        
+
         response = Arguments.createMap();
         if (!isSensorAvailable()) {
             sendResponse("failed", "Finger sensor is not available", promise);
             return;
         }
-        
+
         Activity currentActivity = getCurrentActivity();
-        
+
         if (currentActivity == null) {
             sendResponse("failed", "Can't find current Activity", promise);
             return;
         }
-        
+
         Reprint.authenticate(new AuthenticationListener() {
             @Override
             public void onSuccess(int moduleTag) {
@@ -64,7 +64,7 @@ public class FingerprintModule extends ReactContextBaseJavaModule {
             @Override
             public void onFailure(final AuthenticationFailureReason failureReason, final boolean fatal,
                                   final CharSequence errorMessage, int moduleTag, int errorCode) {
-                
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                     if(failureReason == AuthenticationFailureReason.LOCKED_OUT) {
                         final Thread t = new Thread(new Runnable() {
@@ -84,23 +84,23 @@ public class FingerprintModule extends ReactContextBaseJavaModule {
             }
         });
     }
-    
+
     @ReactMethod
     public void dismiss() {
         Reprint.cancelAuthentication();
     }
-    
-    
+
+
     @ReactMethod
     public void isSensorAvailable(final Promise promise) {
-        
+
         response = Arguments.createMap();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ActivityCompat.checkSelfPermission(mReactContext, Manifest.permission.USE_FINGERPRINT) != PackageManager.PERMISSION_GRANTED) {
                 sendResponse("failed", "You haven't allow this app to use your fingerprint sensor", promise);
                 return;
             }
-            
+
             if (mReactContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_FINGERPRINT) ||
                 ((FingerprintManager) mReactContext.getSystemService(Context.FINGERPRINT_SERVICE)).isHardwareDetected()) {
                 if (((FingerprintManager) mReactContext.getSystemService(Context.FINGERPRINT_SERVICE)).hasEnrolledFingerprints()) {
@@ -112,15 +112,17 @@ public class FingerprintModule extends ReactContextBaseJavaModule {
                 sendResponse("failed", "You don\'t have appropriate hardware", promise);
             }
         }
+
+        sendResponse("failed", "You don\'t have appropriate api version", promise);
     }
-    
+
     private boolean isSensorAvailable() {
         if (ActivityCompat.checkSelfPermission(mReactContext, Manifest.permission.USE_FINGERPRINT) != PackageManager.PERMISSION_GRANTED) {
             return false;
         }
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && (mReactContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_FINGERPRINT) || ((FingerprintManager) mReactContext.getSystemService(Context.FINGERPRINT_SERVICE)).isHardwareDetected());
     }
-    
+
     private void sendResponse(String status, String message, Promise promise) {
         Reprint.cancelAuthentication();
         response = Arguments.createMap();
